@@ -1,4 +1,4 @@
 ftpsync
 =======
 
-Synchronize a remote FTP folder with a local folder
+Shell script em PHP que sincroniza uma pasta FTP remota com uma pasta local.
