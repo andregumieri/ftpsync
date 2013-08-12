@@ -1,16 +1,6 @@
 #!/usr/bin/php
 <?php
-	/*
-	Host: ftp.andregumieri.com
-	Usuário: agfteste
-	Senha: 1qazZAQ!
-	*/
 	error_reporting(E_ERROR | E_PARSE);
-
-	/*define("FTP_HOST", "ftp.andregumieri.com");
-	define("FTP_USER", "andfre24");
-	define("FTP_PASS", "nw9RztHm");
-	define("FTP_ROOT", "andregumieri.com/v2/_hml/images");*/
 	if(!@include 'config.php') die("Arquivo de configuração config.php não encontrado.\n\n");
 
 
@@ -89,12 +79,8 @@
 	$slots = array();
 	$slotFile = array();
     for($x=0; $x<SLOTS; $x++) {
-    	//$conns[$x] = ftp_connect(FTP_HOST);
-		//ftp_login($conns[$x], FTP_USER, FTP_PASS);
 		$slots[$x] = null;
 		$slotFile[$x] = null;
-		//echo "Slot " . ($x+1) . " conectado\n";
-		//ftp_set_option($conns[$x], FTP_TIMEOUT_SEC, 86400);
     }
     $conn_id = ftp_connect(FTP_HOST);
     ftp_login($conn_id, FTP_USER, FTP_PASS);
@@ -179,14 +165,10 @@
 		echo mktime() . " Iniciando {$arquivo} - " . $fo . "\n";
 	}
 
-	//print_r($downloadControle);
-	//unlink(PID);die();
-
 
 
 	// Executa o download
 	$running=null;
-	//execute the handles
 	do {
 		while(($execrun = curl_multi_exec($mh, $running)) == CURLM_CALL_MULTI_PERFORM);
 		if($execrun != CURLM_OK) break;
@@ -195,15 +177,11 @@
 			$info = curl_getinfo($done['handle']);
 			if($info['http_code']>=200 && $info['http_code']<300) {
 				curl_multi_remove_handle($mh, $done['handle']);
-				//$output = curl_multi_getcontent($done['handle']);
 				$baixadoControle = $downloadControle[md5($info['url'])];
-				//print_r($baixadoControle);
-				//print_r($baixadoControle);
 
 				// Fecha o arquivo
 				echo mktime() . " Finalizado " . $baixadoControle['local_file'] . " - " . gettype($baixadoControle['file_handle'])  . "\n";
 				fclose($baixadoControle['file_handle']);
-				//file_put_contents($baixadoControle['local_file'], $output);
 				file_put_contents(DOWNLOADED.'/'.$baixadoControle['arquivo'], mktime());
 				
 				
@@ -231,61 +209,12 @@
 		}
 	} while($running);
 
-	
-	
 
-
-	/*while($totalBaixar!=$baixados) {
-		file_put_contents(PID, mktime());
-		
-		foreach($slots as $num=>&$ret) {
-			//echo "Slot {$num} = {$ret}\n";
-			if(is_null($ret) && $baixar) {
-				$arquivo = array_shift($baixar);
-				$slotFile[$num] = $arquivo;
-				$ret = "FTP_MOREDATA";
-				$comando = str_replace(" ", "\ ", __DIR__)."/do_curl.sh " . FTP_USER . " " . FTP_PASS . " " . FTP_HOST . " {$arquivo} " . str_replace(" ", "\ ", $base.$arquivo) . " .slot{$num} > /dev/null &";
-				//echo $comando; die();
-				exec($comando);
-				echo "[$num] Iniciando {$arquivo}\n";
-			} elseif ($ret=="FTP_FINISHED") {
-				$arquivo = $slotFile[$num];
-				echo "[$num] Finalizado {$arquivo}\n";
-				file_put_contents(DOWNLOADED.'/'.$arquivo, mktime());
-				$ret = null;
-				$slotFile[$num] = null;
-				unlink(".slot{$num}");
-				$baixados++;
-			} elseif ($ret=="FTP_FAILED") {
-				$arquivo = $slotFile[$num];
-				echo "[$num] [FALHA] {$arquivo}\n";
-				$ret = null;
-				$slotFile[$num] = null;
-				$baixados++;
-			} elseif(!is_null($ret)) {
-				$ret = trim(file_get_contents(".slot{$num}"));
-				//$ret = ftp_nb_continue($conns[$num]);
-			}
-		}
-
-		sleep(1);
-
-		//echo "while {$baixados}\n";
-		//$baixados++;
-
-	}*/
 	echo "\n";
 
 
-	/*echo "*** Desconectando ***\n";
-	for($x=0; $x<SLOTS; $x++) {
-		ftp_close($conns[$x]);
-    }*/
 	unlink(PID);
     echo "\n";
-
-    //sleep(30);
-
 	echo "\nFIM - " . date("d/m/Y H:i:s") . "\n\n";
 	curl_multi_close($mh);	
 ?>
