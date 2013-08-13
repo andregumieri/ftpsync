@@ -139,7 +139,6 @@
 	}
 	echo "\n";
 
-
 	echo "*** Processo de download ***\n";
 
 	// Cria o Multi CURL
