@@ -31,9 +31,9 @@
 		$files = array();
 		$dirs = array();
 		$files_complete = array();
-		ftp_chdir($resource, $directory);
-		$entradas = ftp_rawlist($resource, ".", TRUE);
-		ftp_chdir($resource, "/");
+		//ftp_chdir($resource, $directory);
+		$entradas = ftp_rawlist($resource, $directory, TRUE);
+		//ftp_chdir($resource, "/");
 
 		foreach($entradas as $entrada) {
 			if(empty($entrada)) continue;
@@ -56,7 +56,7 @@
 				$dirs[] = $filename;
 			} else {
 				$files[] = $filename;
-				$files_complete[] = array("file"=>$filename, "size"=>$item['size']);
+				$files_complete[] = array("file"=>'/' . $filename, "size"=>$item['size']);
 			}
 		}
 
@@ -139,6 +139,8 @@
 	}
 	echo "\n";
 
+
+
 	echo "*** Processo de download ***\n";
 
 	// Cria o Multi CURL
@@ -172,6 +174,7 @@
 	// Executa o download
 	$running=null;
 	do {
+		file_put_contents(PID, mktime());
 		while(($execrun = curl_multi_exec($mh, $running)) == CURLM_CALL_MULTI_PERFORM);
 		if($execrun != CURLM_OK) break;
 
