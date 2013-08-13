@@ -205,6 +205,7 @@
 				
 			} else {
 				echo "[FALHA] " . $downloadControle[md5($info['url'])]['local_file'] . "\n";
+				print_r($info);
 			}
 		}
 	} while($running);
