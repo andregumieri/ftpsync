@@ -175,9 +175,10 @@
 
 		while($done=curl_multi_info_read($mh)) {
 			$info = curl_getinfo($done['handle']);
-			if($info['http_code']>=200 && $info['http_code']<300) {
+			$baixadoControle = $downloadControle[md5($info['url'])];
+			//if($info['http_code']>=200 && $info['http_code']<300) {
+			if($info['size_download']==$info['download_content_length']) {
 				curl_multi_remove_handle($mh, $done['handle']);
-				$baixadoControle = $downloadControle[md5($info['url'])];
 
 				// Fecha o arquivo
 				echo mktime() . " Finalizado " . $baixadoControle['local_file'] . " - " . gettype($baixadoControle['file_handle'])  . "\n";
@@ -205,6 +206,7 @@
 				
 			} else {
 				echo "[FALHA] " . $downloadControle[md5($info['url'])]['local_file'] . "\n";
+				fclose($baixadoControle['file_handle']);
 				print_r($info);
 			}
 		}
