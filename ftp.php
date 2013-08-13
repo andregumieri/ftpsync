@@ -31,7 +31,10 @@
 		$files = array();
 		$dirs = array();
 		$files_complete = array();
-		$entradas = ftp_rawlist($resource, $directory, TRUE);
+		ftp_chdir($resource, $directory);
+		$entradas = ftp_rawlist($resource, ".", TRUE);
+		ftp_chdir($resource, "/");
+
 		foreach($entradas as $entrada) {
 			if(empty($entrada)) continue;
 			if(substr($entrada, -1)==":") {
