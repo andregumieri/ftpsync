@@ -64,13 +64,17 @@
 	}
 
 
-	function criaConexao($localFile, $remoteFile) {
+	function criaConexao($localFile, $remoteFile, $resume=0) {
+		$resume = intval($resume);
 		$curl = curl_init();
 		curl_setopt($curl, CURLOPT_URL, $remoteFile); #input
 		curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
 		curl_setopt($curl, CURLOPT_FILE, $localFile); #output
 		curl_setopt($curl, CURLOPT_USERPWD, FTP_USER . ":" . FTP_PASS);	
 		curl_setopt($curl, CURLOPT_FRESH_CONNECT, true);
+		if($resume>0) {
+			curl_setopt($curl, CURLOPT_RESUME_FROM, $resume);
+		}
 		return $curl;
 	}
 
@@ -135,7 +139,16 @@
 			continue;
 		}
 
-		$baixar[] = $file;
+		$resume = 0;
+		if(file_exists($base.$file)) {
+			$resume = filesize($base.$file);
+		}
+
+		$baixar[] = array(
+			"file" => $file,
+			"resume" => $resume
+		);
+
 	}
 	echo "\n";
 
@@ -156,17 +169,22 @@
 	// adiciona um arquivo por slot
 	for($x=0; $x<$slots; $x++) {
 		$arquivo = array_shift($baixar);
-		$url = "ftp://" . FTP_HOST . "/" . $arquivo;
+		$url = "ftp://" . FTP_HOST . "/" . $arquivo['file'];
 		$key = md5($url);
 
 		//$fo = null;
-		$fo = fopen(DOWNLOAD."/".$arquivo, 'w');
-		$downloadControle[$key] = array("ftp_url"=>$url, "local_file"=>DOWNLOAD."/".$arquivo, "file_handle"=>$fo, "arquivo"=>$arquivo);
+		$fo = fopen(DOWNLOAD."/".$arquivo['file'], 'a');
+		$downloadControle[$key] = array("ftp_url"=>$url, "local_file"=>DOWNLOAD."/".$arquivo['file'], "file_handle"=>$fo, "arquivo"=>$arquivo['file'], "resume"=>$arquivo['resume']);
 
-		$c = criaConexao($fo, $url);
+		$c = criaConexao($fo, $url, $arquivo['resume']);
 		curl_multi_add_handle($mh,$c);
 
-		echo mktime() . " Iniciando {$arquivo} - " . $fo . "\n";
+		$mensagem = "Iniciando ";
+		if($arquivo['resume']>0) {
+			$mensagem = "Continuando ";
+		}
+
+		echo mktime() . " {$mensagem} {$arquivo['file']} - " . $fo . "\n";
 	}
 
 
@@ -195,17 +213,22 @@
 				// Coloca outro para baixar
 				if($baixar) {
 					$arquivo = array_shift($baixar);
-					$url = "ftp://" . FTP_HOST . "/" . $arquivo;
+					$url = "ftp://" . FTP_HOST . "/" . $arquivo['file'];
 					$key = md5($url);
 
 					$fo = null;
-					$fo = fopen(DOWNLOAD."/".$arquivo, 'w');
-					$downloadControle[$key] = array("ftp_url"=>$url, "local_file"=>DOWNLOAD."/".$arquivo, "file_handle"=>$fo, "arquivo"=>$arquivo);
+					$fo = fopen(DOWNLOAD."/".$arquivo['file'], 'a');
+					$downloadControle[$key] = array("ftp_url"=>$url, "local_file"=>DOWNLOAD."/".$arquivo['file'], "file_handle"=>$fo, "arquivo"=>$arquivo['file'], "resume"=>$arquivo['resume']);
 
-					$c = criaConexao($fo, $url);
+					$c = criaConexao($fo, $url, $arquivo['resume']);
 					curl_multi_add_handle($mh,$c);
 
-					echo mktime() . " Iniciando {$arquivo} - " . $fo . "\n";
+					$mensagem = "Iniciando ";
+					if($arquivo['resume']>0) {
+						$mensagem = "Continuando ";
+					}
+
+					echo mktime() . " {$mensagem} {$arquivo['file']} - " . $fo . "\n";
 				}
 
 				
