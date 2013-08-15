@@ -3,6 +3,9 @@
 	error_reporting(E_ERROR | E_PARSE);
 	if(!@include 'config.php') die("Arquivo de configuração config.php não encontrado.\n\n");
 
+	#require utils/color.php
+	require_once "utils/color.php";
+	use Utils\Color;
 
 	echo "\n\n\n";
 	echo "**********************************\n";
@@ -86,7 +89,7 @@
 	}
 
 	function verbose($mensagem) {
-		echo $mensagem . "\n";
+		echo Color::set($mensagem) . "\n";
 	}
 
 	function baixarArquivo($arquivo) {
@@ -170,7 +173,7 @@
 		if(strpos($file, " -> ") !== false) continue;
 
 		if(file_exists($base.$file) && filesize($base.$file)==intval($size)) {
-			echo "[Ignorando] {$base}{$file}\n";
+			verbose("<red>[Ignorando]</red> <blue>{$base}</blue><green>{$file}</green>");
 			continue;
 		}
 
