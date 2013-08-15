@@ -21,6 +21,27 @@
 
 
 	/**
+	 * REMOVE AS BARRAS FINAIS PARA PADRONIZAR OS NOMES DOS DIRETORIOS
+	 */
+	while(substr($FTP_ROOT, -1)=="/") $FTP_ROOT = substr($FTP_ROOT, 0, -1);
+	while(substr($FTP_DOWNLOAD, -1)=="/") $FTP_DOWNLOAD = substr($FTP_DOWNLOAD, 0, -1);
+	while(substr($FTP_DOWNLOADED, -1)=="/") $FTP_DOWNLOADED = substr($FTP_DOWNLOADED, 0, -1);
+
+
+	/**
+	 * CRIA AS CONSTANTES DA CONFIGURACAO
+	 * (Isso já está parcialemente preparado para o sistema de multiplas configurações)
+	 */
+	define("FTP_HOST", $FTP_HOST); unset($FTP_HOST);
+	define("FTP_USER", $FTP_USER); unset($FTP_USER);
+	define("FTP_PASS", $FTP_PASS); unset($FTP_PASS);
+	define("FTP_ROOT", $FTP_ROOT); unset($FTP_ROOT);
+	define("SLOTS", $FTP_SLOTS); unset($FTP_SLOTS);
+	define("DOWNLOAD", $FTP_DOWNLOAD); unset($FTP_DOWNLOAD);
+	define("DOWNLOADED", $FTP_DOWNLOADED); unset($FTP_DOWNLOADED);
+
+
+	/**
 	 * CRIA AS PASTAS NECESSARIAS
 	 */
 	if(!file_exists(DOWNLOAD)) mkdir(DOWNLOAD, 0755, true);
