@@ -24,6 +24,27 @@
 
 
 	/**
+	 * REMOVE AS BARRAS FINAIS PARA PADRONIZAR OS NOMES DOS DIRETORIOS
+	 */
+	while(substr($FTP_ROOT, -1)=="/") $FTP_ROOT = substr($FTP_ROOT, 0, -1);
+	while(substr($FTP_DOWNLOAD, -1)=="/") $FTP_DOWNLOAD = substr($FTP_DOWNLOAD, 0, -1);
+	while(substr($FTP_DOWNLOADED, -1)=="/") $FTP_DOWNLOADED = substr($FTP_DOWNLOADED, 0, -1);
+
+
+	/**
+	 * CRIA AS CONSTANTES DA CONFIGURACAO
+	 * (Isso já está parcialemente preparado para o sistema de multiplas configurações)
+	 */
+	define("FTP_HOST", $FTP_HOST); unset($FTP_HOST);
+	define("FTP_USER", $FTP_USER); unset($FTP_USER);
+	define("FTP_PASS", $FTP_PASS); unset($FTP_PASS);
+	define("FTP_ROOT", $FTP_ROOT); unset($FTP_ROOT);
+	define("SLOTS", $FTP_SLOTS); unset($FTP_SLOTS);
+	define("DOWNLOAD", $FTP_DOWNLOAD); unset($FTP_DOWNLOAD);
+	define("DOWNLOADED", $FTP_DOWNLOADED); unset($FTP_DOWNLOADED);
+
+
+	/**
 	 * CRIA AS PASTAS NECESSARIAS
 	 */
 	if(!file_exists(DOWNLOAD)) mkdir(DOWNLOAD, 0755, true);
@@ -41,32 +62,29 @@
 		$files = array();
 		$dirs = array();
 		$files_complete = array();
-		//ftp_chdir($resource, $directory);
-		$entradas = ftp_rawlist($resource, $directory, TRUE);
-		//ftp_chdir($resource, "/");
+		ftp_chdir($resource, $directory);
+		$entradas = ftp_rawlist($resource, ".", TRUE);
 
+		$pasta_raiz = $directory;
+		if(substr($directory, -1)!="/") $directory.="/";
 		foreach($entradas as $entrada) {
 			if(empty($entrada)) continue;
 			if(substr($entrada, -1)==":") {
-				$directory = substr($entrada, 0, -1);
+				$pasta_raiz = $directory.substr($entrada, 0, -1);
 				continue;
 			}
-			//echo $entrada . "\n";
 
 			$item = array();
 			$chunks = preg_split("/\s+/", $entrada); 
 			list($item['rights'], $item['number'], $item['user'], $item['group'], $item['size'], $item['month'], $item['day'], $item['time']) = $chunks; 
 			array_splice($chunks, 0, 8);
-			$filename = $directory . "/" . implode(" ", $chunks);
-			//echo print_r($chunks) . "\n";
-
-			//$files[] = $directory.'/'.$entrada;
+			$filename = $pasta_raiz . "/" . implode(" ", $chunks);
 
 			if($item['rights']{0}=="d") {
 				$dirs[] = $filename;
 			} else {
 				$files[] = $filename;
-				$files_complete[] = array("file"=>'/' . $filename, "size"=>$item['size']);
+				$files_complete[] = array("file"=>$filename, "size"=>$item['size']);
 			}
 		}
 
@@ -100,17 +118,18 @@
 		// Abre o arquivo para escrita
 		$fo = fopen(DOWNLOAD."/".$arquivo['file'], 'a');
 
+		// Cria uma conexão curl
+		$c = criaConexao($fo, $url, $arquivo['resume']);
+
 		// Adiciona ao controle de download
 		$downloadControle[$key] = array(
 			"ftp_url"=>$url, 
 			"local_file"=>DOWNLOAD."/".$arquivo['file'], 
 			"file_handle"=>$fo, 
+			"curl" => $c,
 			"arquivo"=>$arquivo['file'], 
 			"resume"=>$arquivo['resume']
 		);
-
-		// Cria uma conexão curl
-		$c = criaConexao($fo, $url, $arquivo['resume']);
 
 		// Adiciona ao Multi Handle
 		curl_multi_add_handle($mh,$c);
@@ -203,11 +222,20 @@
 	$mh = curl_multi_init();
 
 
-	$totalBaixar = count($baixar);
+	/**
+	 * Variavel de controle de informações
+	 */
+	$controle = array(
+		"totalBaixar" => count($baixar),
+		"baixados" => 0,
+	);
+
 	$downloadControle = array();
-	$baixados = 0;
 	$slots = SLOTS;
-	if($slots>$totalBaixar) $slots = $totalBaixar;
+	if($slots>$controle['totalBaixar']) $slots = $controle['totalBaixar'];
+
+
+	
 
 	// adiciona um arquivo por slot
 	for($x=0; $x<$slots; $x++) {
@@ -216,8 +244,43 @@
 
 
 	// Executa o download
+	$lastScreen = 0;
 	$running=null;
 	do {
+		$screen_cols = intval(exec('tput cols'));
+		$screen_lines = intval(exec('tput lines'));
+		$now_ms = microtime(true);
+		if(($now_ms-$lastScreen)>0.500) {
+			$lastScreen = microtime(true);
+			// Escreve na tela a cada 1 segundo
+			fwrite(STDOUT, "\033[2J\n");
+			fwrite(STDOUT, "Faltam " . ($controle['totalBaixar']-$controle['baixados']) . " de " . $controle['totalBaixar'] . "\n");
+			fwrite(STDOUT, "\n");
+			fwrite(STDOUT, "\n");
+	
+			foreach($downloadControle as $downloading) {
+				$info_speed = round(curl_getinfo($downloading['curl'], CURLINFO_SPEED_DOWNLOAD)/1024);
+				$info_size = curl_getinfo($downloading['curl'], CURLINFO_CONTENT_LENGTH_DOWNLOAD) + intval($downloading['resume']);
+				$info_baixado = curl_getinfo($downloading['curl'], CURLINFO_SIZE_DOWNLOAD) + intval($downloading['resume']);
+				$porcentagem = round(($info_baixado*100)/$info_size);
+
+				$progresso_espaco = $screen_cols-2;
+				$progresso_char = round($progresso_espaco*($porcentagem/100));
+				$progresso_blank = $progresso_espaco-$progresso_char;
+
+				$progresso = "[";
+				$progresso .= str_repeat("•", $progresso_char);
+				$progresso .= str_repeat(" ", $progresso_blank);
+				$progresso .= "]";
+				
+				fwrite(STDOUT, $downloading['arquivo'] . "\n");
+				fwrite(STDOUT, $progresso . "\n");
+				fwrite(STDOUT, "({$info_speed} kbps) - {$porcentagem}% | {$info_baixado} de {$info_size} | RESUME: {$downloading['resume']}\n");
+				fwrite(STDOUT, "\n");
+			}
+			flush();
+		}
+
 		// Grava o horario no PID
 		file_put_contents(PID, mktime());
 
@@ -233,15 +296,16 @@
 			$baixadoControle = $downloadControle[md5($info['url'])];
 			
 			if($info['size_download']==$info['download_content_length']) {
+				$controle['baixados']++;
 				curl_close($done['handle']);
 				curl_multi_remove_handle($mh, $done['handle']);
 
 				// Fecha o arquivo
-				echo mktime() . " Finalizado " . $baixadoControle['local_file'] . " - " . gettype($baixadoControle['file_handle'])  . "\n";
+				//echo mktime() . " Finalizado " . $baixadoControle['local_file'] . " - " . gettype($baixadoControle['file_handle'])  . "\n";
 				fclose($baixadoControle['file_handle']);
 				file_put_contents(DOWNLOADED.'/'.$baixadoControle['arquivo'], mktime());
 			} else {
-				echo "[FALHA] " . $downloadControle[md5($info['url'])]['local_file'] . "\n";
+				//echo "[FALHA] " . $downloadControle[md5($info['url'])]['local_file'] . "\n";
 				print_r($info);
 				fclose($baixadoControle['file_handle']);
 			}
