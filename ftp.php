@@ -71,7 +71,7 @@
 		curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
 		curl_setopt($curl, CURLOPT_FILE, $localFile); #output
 		curl_setopt($curl, CURLOPT_USERPWD, FTP_USER . ":" . FTP_PASS);	
-		curl_setopt($curl, CURLOPT_FRESH_CONNECT, true);
+		//curl_setopt($curl, CURLOPT_FRESH_CONNECT, true);
 		if($resume>0) {
 			curl_setopt($curl, CURLOPT_RESUME_FROM, $resume);
 		}
@@ -201,6 +201,7 @@
 			$baixadoControle = $downloadControle[md5($info['url'])];
 			//if($info['http_code']>=200 && $info['http_code']<300) {
 			if($info['size_download']==$info['download_content_length']) {
+				curl_close($done['handle']);
 				curl_multi_remove_handle($mh, $done['handle']);
 
 				// Fecha o arquivo
