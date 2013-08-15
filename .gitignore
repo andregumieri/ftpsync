@@ -2,3 +2,4 @@ download
 .pid
 config.php
 .cache
+__*
