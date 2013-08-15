@@ -18,14 +18,14 @@ class Color {
         "magenta"    => 35,
         "cyan"       => 36,
         "white"      => 37,
-        "black_bg"   => 40,
-        "red_bg"     => 41,
-        "green_bg"   => 42,
-        "yellow_bg"  => 43,
-        "blue_bg"    => 44,
-        "magenta_bg" => 45,
-        "cyan_bg"    => 46,
-        "white_bg"   => 47
+        "blackbg"   => 40,
+        "redbg"     => 41,
+        "greenbg"   => 42,
+        "yellowbg"  => 43,
+        "bluebg"    => 44,
+        "magentabg" => 45,
+        "cyanbg"    => 46,
+        "whitebg"   => 47
     );
  
     public static function set($str) {

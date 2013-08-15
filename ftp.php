@@ -192,7 +192,7 @@
 		if(strpos($file, " -> ") !== false) continue;
 
 		if(file_exists($base.$file) && filesize($base.$file)==intval($size)) {
-			verbose("<red>[Ignorando]</red> <blue>{$base}</blue><green>{$file}</green>");
+			verbose("<redbg><black>[Ignorando]</black></redbg> <blue>{$base}</blue><green>{$file}</green>");
 			continue;
 		}
 
