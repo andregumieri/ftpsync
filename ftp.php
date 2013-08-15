@@ -215,14 +215,20 @@
 	// Executa o download
 	$running=null;
 	do {
+		// Grava o horario no PID
 		file_put_contents(PID, mktime());
-		while(($execrun = curl_multi_exec($mh, $running)) == CURLM_CALL_MULTI_PERFORM);
-		if($execrun != CURLM_OK) break;
 
+
+		// Executa o CURL
+		curl_multi_exec($mh, $running);
+		$ready=curl_multi_select($mh);
+		
+
+		// Verifica se alguma conexão terminou (com sucesso ou falha)
 		while($done=curl_multi_info_read($mh)) {
 			$info = curl_getinfo($done['handle']);
 			$baixadoControle = $downloadControle[md5($info['url'])];
-			//if($info['http_code']>=200 && $info['http_code']<300) {
+			
 			if($info['size_download']==$info['download_content_length']) {
 				curl_close($done['handle']);
 				curl_multi_remove_handle($mh, $done['handle']);
@@ -233,15 +239,19 @@
 				file_put_contents(DOWNLOADED.'/'.$baixadoControle['arquivo'], mktime());
 			} else {
 				echo "[FALHA] " . $downloadControle[md5($info['url'])]['local_file'] . "\n";
-				fclose($baixadoControle['file_handle']);
 				print_r($info);
+				fclose($baixadoControle['file_handle']);
 			}
+
+			// Tira o arquivo da array de downloads
+			unset($downloadControle[md5($info['url'])]);
 
 			// Coloca outro arquivo para baixar
 			if($baixar) {
 				baixarArquivo(array_shift($baixar));
 			}
 		}
+		
 	} while($running);
 
 
