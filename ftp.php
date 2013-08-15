@@ -20,13 +20,20 @@
 
 
 
-
+	/**
+	 * CRIA AS PASTAS NECESSARIAS
+	 */
 	if(!file_exists(DOWNLOAD)) mkdir(DOWNLOAD, 0755, true);
 	if(!file_exists(DOWNLOAD)) die("Não foi possível criar pasta de download\n");
 
 	if(!file_exists(DOWNLOADED)) mkdir(DOWNLOADED, 0755, true);
 	if(!file_exists(DOWNLOADED)) die("Não foi possível criar pasta de baixados\n");
 
+
+
+	/**
+	 * FUNCOES
+	 */
 	function listaRecursiva($resource, $directory) { 
 		$files = array();
 		$dirs = array();
@@ -76,6 +83,39 @@
 			curl_setopt($curl, CURLOPT_RESUME_FROM, $resume);
 		}
 		return $curl;
+	}
+
+	function verbose($mensagem) {
+		echo $mensagem . "\n";
+	}
+
+	function baixarArquivo($arquivo) {
+		global $downloadControle, $mh;
+		$url = "ftp://" . FTP_HOST . "/" . $arquivo['file'];
+		$key = md5($url);
+
+		// Abre o arquivo para escrita
+		$fo = fopen(DOWNLOAD."/".$arquivo['file'], 'a');
+
+		// Adiciona ao controle de download
+		$downloadControle[$key] = array(
+			"ftp_url"=>$url, 
+			"local_file"=>DOWNLOAD."/".$arquivo['file'], 
+			"file_handle"=>$fo, 
+			"arquivo"=>$arquivo['file'], 
+			"resume"=>$arquivo['resume']
+		);
+
+		// Cria uma conexão curl
+		$c = criaConexao($fo, $url, $arquivo['resume']);
+
+		// Adiciona ao Multi Handle
+		curl_multi_add_handle($mh,$c);
+
+		// Exibe mensagem no terminal
+		$mensagem = "Iniciando ";
+		if($arquivo['resume']>0) $mensagem = "Continuando ";
+		verbose(mktime() . " {$mensagem} {$arquivo['file']}");
 	}
 
 
@@ -168,25 +208,8 @@
 
 	// adiciona um arquivo por slot
 	for($x=0; $x<$slots; $x++) {
-		$arquivo = array_shift($baixar);
-		$url = "ftp://" . FTP_HOST . "/" . $arquivo['file'];
-		$key = md5($url);
-
-		//$fo = null;
-		$fo = fopen(DOWNLOAD."/".$arquivo['file'], 'a');
-		$downloadControle[$key] = array("ftp_url"=>$url, "local_file"=>DOWNLOAD."/".$arquivo['file'], "file_handle"=>$fo, "arquivo"=>$arquivo['file'], "resume"=>$arquivo['resume']);
-
-		$c = criaConexao($fo, $url, $arquivo['resume']);
-		curl_multi_add_handle($mh,$c);
-
-		$mensagem = "Iniciando ";
-		if($arquivo['resume']>0) {
-			$mensagem = "Continuando ";
-		}
-
-		echo mktime() . " {$mensagem} {$arquivo['file']} - " . $fo . "\n";
+		baixarArquivo(array_shift($baixar));
 	}
-
 
 
 	// Executa o download
@@ -208,35 +231,15 @@
 				echo mktime() . " Finalizado " . $baixadoControle['local_file'] . " - " . gettype($baixadoControle['file_handle'])  . "\n";
 				fclose($baixadoControle['file_handle']);
 				file_put_contents(DOWNLOADED.'/'.$baixadoControle['arquivo'], mktime());
-				
-				
-
-				// Coloca outro para baixar
-				if($baixar) {
-					$arquivo = array_shift($baixar);
-					$url = "ftp://" . FTP_HOST . "/" . $arquivo['file'];
-					$key = md5($url);
-
-					$fo = null;
-					$fo = fopen(DOWNLOAD."/".$arquivo['file'], 'a');
-					$downloadControle[$key] = array("ftp_url"=>$url, "local_file"=>DOWNLOAD."/".$arquivo['file'], "file_handle"=>$fo, "arquivo"=>$arquivo['file'], "resume"=>$arquivo['resume']);
-
-					$c = criaConexao($fo, $url, $arquivo['resume']);
-					curl_multi_add_handle($mh,$c);
-
-					$mensagem = "Iniciando ";
-					if($arquivo['resume']>0) {
-						$mensagem = "Continuando ";
-					}
-
-					echo mktime() . " {$mensagem} {$arquivo['file']} - " . $fo . "\n";
-				}
-
-				
 			} else {
 				echo "[FALHA] " . $downloadControle[md5($info['url'])]['local_file'] . "\n";
 				fclose($baixadoControle['file_handle']);
 				print_r($info);
+			}
+
+			// Coloca outro arquivo para baixar
+			if($baixar) {
+				baixarArquivo(array_shift($baixar));
 			}
 		}
 	} while($running);
