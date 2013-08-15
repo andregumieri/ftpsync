@@ -59,32 +59,29 @@
 		$files = array();
 		$dirs = array();
 		$files_complete = array();
-		//ftp_chdir($resource, $directory);
-		$entradas = ftp_rawlist($resource, $directory, TRUE);
-		//ftp_chdir($resource, "/");
+		ftp_chdir($resource, $directory);
+		$entradas = ftp_rawlist($resource, ".", TRUE);
 
+		$pasta_raiz = $directory;
+		if(substr($directory, -1)!="/") $directory.="/";
 		foreach($entradas as $entrada) {
 			if(empty($entrada)) continue;
 			if(substr($entrada, -1)==":") {
-				$directory = substr($entrada, 0, -1);
+				$pasta_raiz = $directory.substr($entrada, 0, -1);
 				continue;
 			}
-			//echo $entrada . "\n";
 
 			$item = array();
 			$chunks = preg_split("/\s+/", $entrada); 
 			list($item['rights'], $item['number'], $item['user'], $item['group'], $item['size'], $item['month'], $item['day'], $item['time']) = $chunks; 
 			array_splice($chunks, 0, 8);
-			$filename = $directory . "/" . implode(" ", $chunks);
-			//echo print_r($chunks) . "\n";
-
-			//$files[] = $directory.'/'.$entrada;
+			$filename = $pasta_raiz . "/" . implode(" ", $chunks);
 
 			if($item['rights']{0}=="d") {
 				$dirs[] = $filename;
 			} else {
 				$files[] = $filename;
-				$files_complete[] = array("file"=>'/' . $filename, "size"=>$item['size']);
+				$files_complete[] = array("file"=>$filename, "size"=>$item['size']);
 			}
 		}
 
