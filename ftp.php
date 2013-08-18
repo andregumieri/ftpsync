@@ -304,11 +304,11 @@
 				curl_multi_remove_handle($mh, $done['handle']);
 
 				// Fecha o arquivo
-				//echo mktime() . " Finalizado " . $baixadoControle['local_file'] . " - " . gettype($baixadoControle['file_handle'])  . "\n";
+				echo mktime() . " Finalizado " . $baixadoControle['local_file'] . " - " . gettype($baixadoControle['file_handle'])  . "\n";
 				fclose($baixadoControle['file_handle']);
 				file_put_contents(DOWNLOADED.'/'.$baixadoControle['arquivo'], mktime());
 			} else {
-				//echo "[FALHA] " . $downloadControle[md5($info['url'])]['local_file'] . "\n";
+				echo "[FALHA] " . $downloadControle[md5($info['url'])]['local_file'] . "\n";
 				print_r($info);
 				fclose($baixadoControle['file_handle']);
 			}
