@@ -264,14 +264,14 @@
 				$info_baixado = curl_getinfo($downloading['curl'], CURLINFO_SIZE_DOWNLOAD) + intval($downloading['resume']);
 				$porcentagem = round(($info_baixado*100)/$info_size);
 
-				$progresso_espaco = $screen_cols-2;
+				$progresso_espaco = $screen_cols;
 				$progresso_char = round($progresso_espaco*($porcentagem/100));
 				$progresso_blank = $progresso_espaco-$progresso_char;
 
-				$progresso = "[";
-				$progresso .= str_repeat("•", $progresso_char);
-				$progresso .= str_repeat(" ", $progresso_blank);
-				$progresso .= "]";
+				//$progresso = "[";
+				$progresso = Color::set("<bluebg>" . str_repeat(" ", $progresso_char) . "</bluebg>");
+				$progresso .= Color::set("<blackbg>" . str_repeat(" ", $progresso_blank) . "</blackbg>");
+				//$progresso .= "]";
 				
 				fwrite(STDOUT, $downloading['arquivo'] . "\n");
 				fwrite(STDOUT, $progresso . "\n");
