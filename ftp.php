@@ -164,55 +164,58 @@
 	ftp_close($conn_id);
 
 
-	// Cria pastas
-	echo "*** Criar diretorios ***\n";
-	$base = DOWNLOAD.'/';
-	@mkdir($base.str_replace("./", "", FTP_ROOT."/"), 0755, true);
-	@mkdir(DOWNLOADED.'/'.str_replace("./", "", FTP_ROOT."/"), 0755, true);
-	foreach($lista['dirs'] as $file) {
-		if(strpos($file, " -> ") !== false) continue;
-		if(file_exists($base.$file)) continue;
-
-		if(!@mkdir($base.$file, 0755, true)) {
-			echo "[Erro Diretorio] {$base}{$file}\n";
-		} else {
-			echo "Diretorio Criado: {$base}{$file}\n";
-		}
-		mkdir(DOWNLOADED.'/'.$file, 0755, true);
-	}
-	echo "\n";
-
-
-
 	echo "*** Criar lista de download ***\n";
 	$baixar = array();
 	foreach($lista['files_complete'] as $file_complete) {
 		$file = $file_complete['file'];
 		$size = $file_complete['size'];
+		$pathinfo = pathinfo($file);
+		print_r($pathinfo);
+		
 		if(strpos($file, " -> ") !== false) continue;
 
+		// Verifica se o arquivo já existe e se é do mesmo tamanho do arquivo remoto
 		if(file_exists($base.$file) && filesize($base.$file)==intval($size)) {
 			verbose("<redbg><black>[Ignorando]</black></redbg> <blue>{$base}</blue><green>{$file}</green>");
 			continue;
 		}
 
+		// Verifica se está em cache
 		if(file_exists(DOWNLOADED.'/'.$file)) {
 			echo "[Ja baixado] {$base}{$file}\n";
 			continue;
 		}
 
+		// Verifica se é para dar resume no arquivo
 		$resume = 0;
 		if(file_exists($base.$file)) {
 			$resume = filesize($base.$file);
 		}
 
+
+		// Cria o diretorio na pasta de download e na pasta de cache
+		if(!file_exists(DOWNLOAD.'/'.$pathinfo['dirname'])) {
+			if(!@mkdir(DOWNLOAD.'/'.$pathinfo['dirname'], 0755, true)) {
+				verbose("ERRO: Não foi possível criar o diretório de download '" . DOWNLOAD.'/'.$pathinfo['dirname'] . "'");
+				unlink(PID); die();
+			}
+		}
+
+		if(!file_exists(DOWNLOADED.'/'.$pathinfo['dirname'])) {
+			if(!@mkdir(DOWNLOADED.'/'.$pathinfo['dirname'], 0755, true)) {
+				verbose("ERRO: Não foi possível criar o diretório de cache '" . DOWNLOADED.'/'.$pathinfo['dirname'] . "'");
+				unlink(PID); die();	
+			}
+		}
+
+		// Adiciona a lista
 		$baixar[] = array(
 			"file" => $file,
 			"resume" => $resume
 		);
-
 	}
 	echo "\n";
+
 
 
 
