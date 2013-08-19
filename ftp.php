@@ -7,10 +7,6 @@
 	require_once "utils/color.php";
 	use Utils\Color;
 
-	echo "\n\n\n";
-	echo "**********************************\n";
-	echo "Iniciado em " . date("d/m/Y H:i:s") . "\n";
-	echo "**********************************\n\n";
 
 	if(file_exists(PID)) {
 		$timepid = file_get_contents(PID);
@@ -18,7 +14,6 @@
 
 		if($time_diff<PID_WAIT_TIME) die("Já existe um processo em andamento. Tente novamente em " . (PID_WAIT_TIME-$time_diff) . " segundos.\n");
 	}
-
 	file_put_contents(PID, mktime());
 
 
@@ -53,6 +48,15 @@
 	if(!file_exists(DOWNLOADED)) mkdir(DOWNLOADED, 0755, true);
 	if(!file_exists(DOWNLOADED)) die("Não foi possível criar pasta de baixados\n");
 
+
+	/**
+	 * CRIA ARQUIVO DE LOG
+	 */
+	$LOG_FILE = '';
+	if(defined("LOG")) {
+		$LOG_FILE = LOG . '/ftpsync_' . date('Y-m-d_H-i-s') . '.txt';
+		file_put_contents($LOG_FILE, '');
+	}
 
 
 	/**
@@ -106,8 +110,17 @@
 		return $curl;
 	}
 
-	function verbose($mensagem) {
-		echo Color::set($mensagem) . "\n";
+	function verbose($mensagem, $nivel="echo") {
+		global $LOG_FILE;
+		$nivel = explode(",", $nivel);
+		
+		if(array_search("echo", $nivel)!==false){
+			echo Color::set($mensagem) . "\n";
+		}
+
+		if(array_search("log", $nivel)!==false && defined("LOG")){
+			file_put_contents($LOG_FILE, strip_tags($mensagem)."\n", FILE_APPEND);
+		}
 	}
 
 	function baixarArquivo($arquivo) {
@@ -137,13 +150,20 @@
 		// Exibe mensagem no terminal
 		$mensagem = "Iniciando ";
 		if($arquivo['resume']>0) $mensagem = "Continuando ";
-		verbose(mktime() . " {$mensagem} {$arquivo['file']}");
+		verbose("[{$mensagem} - " . date("H:i:s") . "] {$arquivo['file']}", "echo,log");
 	}
 
 
 
+	/* Inicia */
+	verbose("\n\n");
+	verbose("**********************************");
+	verbose("Iniciado em " . date("d/m/Y H:i:s"), "echo,log");
+	verbose("**********************************");
+
+
     // Faz login
-    echo "*** Conexao ***\n";
+    verbose("*** Conexao ***");
 	$conns = array();
 	$slots = array();
 	$slotFile = array();
@@ -164,25 +184,24 @@
 	ftp_close($conn_id);
 
 
-	echo "*** Criar lista de download ***\n";
+	verbose("*** Criar lista de download ***", "echo,log");
 	$baixar = array();
 	foreach($lista['files_complete'] as $file_complete) {
 		$file = $file_complete['file'];
 		$size = $file_complete['size'];
 		$pathinfo = pathinfo($file);
-		print_r($pathinfo);
 		
 		if(strpos($file, " -> ") !== false) continue;
 
 		// Verifica se o arquivo já existe e se é do mesmo tamanho do arquivo remoto
 		if(file_exists($base.$file) && filesize($base.$file)==intval($size)) {
-			verbose("<redbg><black>[Ignorando]</black></redbg> <blue>{$base}</blue><green>{$file}</green>");
+			verbose("<redbg><black>[Ignorando]</black></redbg> <blue>{$base}</blue><green>{$file}</green>", "echo,log");
 			continue;
 		}
 
 		// Verifica se está em cache
 		if(file_exists(DOWNLOADED.'/'.$file)) {
-			echo "[Ja baixado] {$base}{$file}\n";
+			verbose("[Ja baixado] {$base}{$file}", "echo,log");
 			continue;
 		}
 
@@ -196,14 +215,14 @@
 		// Cria o diretorio na pasta de download e na pasta de cache
 		if(!file_exists(DOWNLOAD.'/'.$pathinfo['dirname'])) {
 			if(!@mkdir(DOWNLOAD.'/'.$pathinfo['dirname'], 0755, true)) {
-				verbose("ERRO: Não foi possível criar o diretório de download '" . DOWNLOAD.'/'.$pathinfo['dirname'] . "'");
+				verbose("ERRO: Não foi possível criar o diretório de download '" . DOWNLOAD.'/'.$pathinfo['dirname'] . "'", "echo,log");
 				unlink(PID); die();
 			}
 		}
 
 		if(!file_exists(DOWNLOADED.'/'.$pathinfo['dirname'])) {
 			if(!@mkdir(DOWNLOADED.'/'.$pathinfo['dirname'], 0755, true)) {
-				verbose("ERRO: Não foi possível criar o diretório de cache '" . DOWNLOADED.'/'.$pathinfo['dirname'] . "'");
+				verbose("ERRO: Não foi possível criar o diretório de cache '" . DOWNLOADED.'/'.$pathinfo['dirname'] . "'", "echo,log");
 				unlink(PID); die();	
 			}
 		}
@@ -219,7 +238,7 @@
 
 
 
-	echo "*** Processo de download ***\n";
+	verbose("*** Processo de download ***");
 
 	// Cria o Multi CURL
 	$mh = curl_multi_init();
@@ -304,12 +323,12 @@
 				curl_multi_remove_handle($mh, $done['handle']);
 
 				// Fecha o arquivo
-				echo mktime() . " Finalizado " . $baixadoControle['local_file'] . " - " . gettype($baixadoControle['file_handle'])  . "\n";
+				verbose("[Finalizado - " . date("H:i:s") . "] " . $baixadoControle['arquivo'], "echo,log");
 				fclose($baixadoControle['file_handle']);
 				file_put_contents(DOWNLOADED.'/'.$baixadoControle['arquivo'], mktime());
 			} else {
-				echo "[FALHA] " . $downloadControle[md5($info['url'])]['local_file'] . "\n";
-				print_r($info);
+				verbose("[Falha - " . date("H:i:s") . "] " . $downloadControle[md5($info['url'])]['arquivo'], "echo,log");
+				verbose(print_r($info, true), "echo,log");
 				fclose($baixadoControle['file_handle']);
 			}
 
@@ -329,7 +348,8 @@
 
 
 	unlink(PID);
-    echo "\n";
-	echo "\nFIM - " . date("d/m/Y H:i:s") . "\n\n";
+    echo "\n\n";
+	verbose("FIM - " . date("d/m/Y H:i:s"), "echo,log");
+	echo "\n";
 	curl_multi_close($mh);	
 ?>
