@@ -316,20 +316,23 @@
 		while($done=curl_multi_info_read($mh)) {
 			$info = curl_getinfo($done['handle']);
 			$baixadoControle = $downloadControle[md5($info['url'])];
+			curl_close($done['handle']);
+			curl_multi_remove_handle($mh, $done['handle']);
+			fclose($baixadoControle['file_handle']);
 			
 			if($info['size_download']==$info['download_content_length']) {
+				// Adiciona +1 no controle de baixados
 				$controle['baixados']++;
-				curl_close($done['handle']);
-				curl_multi_remove_handle($mh, $done['handle']);
 
 				// Fecha o arquivo
 				verbose("[Finalizado - " . date("H:i:s") . "] " . $baixadoControle['arquivo'], "echo,log");
-				fclose($baixadoControle['file_handle']);
+				
+				// Grava o arquivo de cache
 				file_put_contents(DOWNLOADED.'/'.$baixadoControle['arquivo'], mktime());
 			} else {
+				$msgDeErro = curl_error($done['handle']);
 				verbose("[Falha - " . date("H:i:s") . "] " . $downloadControle[md5($info['url'])]['arquivo'], "echo,log");
-				verbose(print_r($info, true), "echo,log");
-				fclose($baixadoControle['file_handle']);
+				verbose("\t{$msgDeErro}", "echo,log");
 			}
 
 			// Tira o arquivo da array de downloads
