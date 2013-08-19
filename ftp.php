@@ -103,7 +103,7 @@
 		curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
 		curl_setopt($curl, CURLOPT_FILE, $localFile); #output
 		curl_setopt($curl, CURLOPT_USERPWD, FTP_USER . ":" . FTP_PASS);	
-		curl_setopt($curl, CURLOPT_FRESH_CONNECT, true);
+		//curl_setopt($curl, CURLOPT_FRESH_CONNECT, true);
 		if($resume>0) {
 			curl_setopt($curl, CURLOPT_RESUME_FROM, $resume);
 		}
