@@ -31,4 +31,7 @@
 
 	# Tempo de espera para matar o PID e executar um novo
 	define("PID_WAIT_TIME", 60);
+
+	# Onde escrever o log (opcional)
+	# define("LOG", "/caminho/dos/logs");
 ?>
