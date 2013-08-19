@@ -341,7 +341,7 @@
 			}
 		}
 		
-	} while($running);
+	} while($running || count($baixar));
 
 
 	echo "\n";
