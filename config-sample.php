@@ -26,6 +26,9 @@
 	# Pasta de cache dos já baixados
 	$FTP_DOWNLOADED	= __DIR__."/.cache";
 
+	# Pasta onde são armazenados os finalizados (opcional)
+	# $FTP_FINISHED = __DIR__."/finalizados";
+
 	# Arquivo que impede o script de executar 2 vezes
 	define("PID", __DIR__ . "/.pid");
 

@@ -24,7 +24,9 @@
 	while(substr($FTP_ROOT, -1)=="/") $FTP_ROOT = substr($FTP_ROOT, 0, -1);
 	while(substr($FTP_DOWNLOAD, -1)=="/") $FTP_DOWNLOAD = substr($FTP_DOWNLOAD, 0, -1);
 	while(substr($FTP_DOWNLOADED, -1)=="/") $FTP_DOWNLOADED = substr($FTP_DOWNLOADED, 0, -1);
-
+	if(isset($FTP_FINISHED)) {
+		while(substr($FTP_FINISHED, -1)=="/") $FTP_FINISHED = substr($FTP_FINISHED, 0, -1);
+	}
 
 	/**
 	 * CRIA AS CONSTANTES DA CONFIGURACAO
@@ -37,6 +39,7 @@
 	define("SLOTS", $FTP_SLOTS); unset($FTP_SLOTS);
 	define("DOWNLOAD", $FTP_DOWNLOAD); unset($FTP_DOWNLOAD);
 	define("DOWNLOADED", $FTP_DOWNLOADED); unset($FTP_DOWNLOADED);
+	if(isset($FTP_FINISHED)) define("FINISHED", $FTP_FINISHED); unset($FTP_FINISHED);
 
 
 	/**
@@ -48,6 +51,11 @@
 	if(!file_exists(DOWNLOADED)) mkdir(DOWNLOADED, 0755, true);
 	if(!file_exists(DOWNLOADED)) die("Não foi possível criar pasta de baixados\n");
 
+	if(defined(FINISHED)) {
+		if(!file_exists(FINISHED)) mkdir(FINISHED, 0755, true);
+		if(!file_exists(FINISHED)) die("Não foi possível criar pasta de finalizados\n");		
+	}
+
 
 	/**
 	 * CRIA ARQUIVO DE LOG
@@ -57,6 +65,15 @@
 		$LOG_FILE = LOG . '/ftpsync_' . date('Y-m-d_H-i-s') . '.txt';
 		file_put_contents($LOG_FILE, '');
 	}
+
+
+
+	/**
+	 * PREPARA ESTRUTURA PARA MOVIMENTACAO DE FINALIZADOS
+	 */
+	$finalizados_root_niveis = count(explode("/", FTP_ROOT));
+	$finalizados_array = array();
+
 
 
 	/**
@@ -103,7 +120,7 @@
 		curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
 		curl_setopt($curl, CURLOPT_FILE, $localFile); #output
 		curl_setopt($curl, CURLOPT_USERPWD, FTP_USER . ":" . FTP_PASS);	
-		curl_setopt($curl, CURLOPT_FRESH_CONNECT, true);
+		//curl_setopt($curl, CURLOPT_FRESH_CONNECT, true);
 		if($resume>0) {
 			curl_setopt($curl, CURLOPT_RESUME_FROM, $resume);
 		}
@@ -151,6 +168,32 @@
 		$mensagem = "Iniciando ";
 		if($arquivo['resume']>0) $mensagem = "Continuando ";
 		verbose("[{$mensagem} - " . date("H:i:s") . "] {$arquivo['file']}", "echo,log");
+	}
+
+	function moverParaFinalizados($arquivo, $finalizados_array) {
+		if(!defined("FINISHED")) return false;
+		global $finalizados_root_niveis;
+
+		// Cria a raiz nos finalizados (se não existir)
+		if(!file_exists(FINISHED.'/'.FTP_ROOT)) @mkdir(FINISHED.'/'.FTP_ROOT, 0755, true);
+
+		$pathinfo = pathinfo($arquivo);
+		$dir_niveis = explode("/", $pathinfo['dirname']);
+		$dir_niveis = array_slice($dir_niveis, 0, $finalizados_root_niveis+1);
+		if(count($dir_niveis)==$finalizados_root_niveis+1) {
+			$dir_niveis = implode("/", $dir_niveis);
+			$dir_key = md5($dir_niveis);
+			$finalizados_array[$dir_key]--;
+
+			// Se chegou a zero
+			if($finalizados_array[$dir_key]==0) {
+				$comando = "mv '" . DOWNLOAD . "/{$dir_niveis}' '" . FINISHED . "/{$dir_niveis}'\n";
+				exec($comando);
+			}
+		} elseif(count($dir_niveis)==$finalizados_root_niveis) {
+			$comando = "mv '" . DOWNLOAD . "/{$arquivo}' '" . FINISHED . "/{$arquivo}'\n";
+			exec($comando);
+		}
 	}
 
 
@@ -226,6 +269,21 @@
 				unlink(PID); die();	
 			}
 		}
+
+		// Cria estrutura de finalizados
+		$dir_niveis = explode("/", $pathinfo['dirname']);
+		$dir_niveis = array_slice($dir_niveis, 0, $finalizados_root_niveis+1);
+		if(count($dir_niveis)==$finalizados_root_niveis+1) {
+			$dir_niveis = implode("/", $dir_niveis);
+			$dir_key = md5($dir_niveis);
+			
+			if(!isset($finalizados_array[$dir_key])) {
+				$finalizados_array[$dir_key] = 0;
+			}
+
+			$finalizados_array[$dir_key]++;
+		}
+
 
 		// Adiciona a lista
 		$baixar[] = array(
@@ -316,20 +374,26 @@
 		while($done=curl_multi_info_read($mh)) {
 			$info = curl_getinfo($done['handle']);
 			$baixadoControle = $downloadControle[md5($info['url'])];
+			curl_close($done['handle']);
+			curl_multi_remove_handle($mh, $done['handle']);
+			fclose($baixadoControle['file_handle']);
 			
 			if($info['size_download']==$info['download_content_length']) {
+				// Adiciona +1 no controle de baixados
 				$controle['baixados']++;
-				curl_close($done['handle']);
-				curl_multi_remove_handle($mh, $done['handle']);
 
 				// Fecha o arquivo
 				verbose("[Finalizado - " . date("H:i:s") . "] " . $baixadoControle['arquivo'], "echo,log");
-				fclose($baixadoControle['file_handle']);
+				
+				// Grava o arquivo de cache
 				file_put_contents(DOWNLOADED.'/'.$baixadoControle['arquivo'], mktime());
+
+				// Move para finalizados (se a opção estiver setada)
+				moverParaFinalizados($baixadoControle['arquivo'], &$finalizados_array);
 			} else {
+				$msgDeErro = curl_error($done['handle']);
 				verbose("[Falha - " . date("H:i:s") . "] " . $downloadControle[md5($info['url'])]['arquivo'], "echo,log");
-				verbose(print_r($info, true), "echo,log");
-				fclose($baixadoControle['file_handle']);
+				verbose("\t{$msgDeErro}", "echo,log");
 			}
 
 			// Tira o arquivo da array de downloads
