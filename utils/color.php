@@ -33,9 +33,22 @@ class Color {
       $reg = '#</([a-z]+)>#iU';
 
       if ($c = preg_match_all($reg, $str, $matches)) {
+        $final_text = "";
         $arr_itens = array();
+
+        //adiciona comeco sem tag
+        $pos = strpos($str, '<');
+        if ($pos > 0) {
+          $notag = substr($str, 0, $pos);
+          $arr = explode($notag, $str);
+          $str = $arr[1];
+
+          $final_text .= $notag;
+        }
+
         $str_temp = $str;
         $arr_exp = $matches[1];
+
         foreach ($arr_exp as $exploder) {
           if (strlen($str_temp) != strlen($str)) {
             $arr_temp = explode($str_temp, $str);
@@ -47,7 +60,16 @@ class Color {
           
 
           array_push($arr_itens, $arr[0]);
+
+          //adiciona resto sem tag
+          $pos = strpos($arr[1], '<');
+          if ($pos === false) {
+            array_push($arr_itens, $arr[1]);
+          }
         }
+
+        #echo "\n\n***ITENS***\n";
+        #print_r($arr_itens);
 
         //limpa as tags que não serao usadas
         $arr_clean = array();
@@ -87,16 +109,16 @@ class Color {
           if(strlen($str_content) > 0) array_push($arr_contents, $str_content);
         }
 
-          $final_text = "";
-          for ($i = 0; $i < count($arr_colors); $i++) {
-            $color = str_replace($arr_contents[$i], '', $arr_colors[$i]);
-            $final_text .= self::returnColorfulText($arr_contents[$i], $color);
-          }
-
-          return $final_text;
+        
+        for ($i = 0; $i < count($arr_contents); $i++) {
+          $color = str_replace($arr_contents[$i], '', $arr_colors[$i]);
+          $final_text .= self::returnColorfulText($arr_contents[$i], $color);
         }
 
-        return $str;
+        return $final_text;
+      }
+
+      return $str;
     }
 
     private static function returnColorfulText($txt, $color) {
