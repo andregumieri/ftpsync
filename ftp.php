@@ -158,7 +158,8 @@
 			"file_handle"=>$fo, 
 			"curl" => $c,
 			"arquivo"=>$arquivo['file'], 
-			"resume"=>$arquivo['resume']
+			"resume"=>$arquivo['resume'],
+			"size"=>$arquivo['size']
 		);
 
 		// Adiciona ao Multi Handle
@@ -288,11 +289,11 @@
 		// Adiciona a lista
 		$baixar[] = array(
 			"file" => $file,
+			"size" => $size,
 			"resume" => $resume
 		);
 	}
 	echo "\n";
-
 
 
 
@@ -330,6 +331,11 @@
 		$screen_cols = intval(exec('tput cols'));
 		$screen_lines = intval(exec('tput lines'));
 		$now_ms = microtime(true);
+		$json = array(
+			"timestamp" => mktime(),
+			"info" => array(),
+			"downloads" => array()
+		);
 		if(($now_ms-$lastScreen)>0.500) {
 			$lastScreen = microtime(true);
 			// Escreve na tela a cada 1 segundo
@@ -337,12 +343,21 @@
 			fwrite(STDOUT, "Faltam " . ($controle['totalBaixar']-$controle['baixados']) . " de " . $controle['totalBaixar'] . "\n");
 			fwrite(STDOUT, "\n");
 			fwrite(STDOUT, "\n");
+
+			$json['info'] = array(
+				'totalBaixar' => $controle['totalBaixar'],
+				'baixados' => $controle['baixados'],
+			);
 	
 			foreach($downloadControle as $downloading) {
+				$jsonDownload = array();
+
 				$info_speed = round(curl_getinfo($downloading['curl'], CURLINFO_SPEED_DOWNLOAD)/1024);
 				$info_size = curl_getinfo($downloading['curl'], CURLINFO_CONTENT_LENGTH_DOWNLOAD) + intval($downloading['resume']);
 				$info_baixado = curl_getinfo($downloading['curl'], CURLINFO_SIZE_DOWNLOAD) + intval($downloading['resume']);
 				$porcentagem = round(($info_baixado*100)/$info_size);
+				$porcentagem_resume = round((intval($downloading['resume'])*100)/intval($downloading['size']));
+				$porcentagem_real = $porcentagem-$porcentagem_resume;
 
 				$progresso_espaco = $screen_cols;
 				$progresso_char = round($progresso_espaco*($porcentagem/100));
@@ -357,8 +372,23 @@
 				fwrite(STDOUT, $progresso . "\n");
 				fwrite(STDOUT, "({$info_speed} kbps) - {$porcentagem}% | {$info_baixado} de {$info_size} | RESUME: {$downloading['resume']}\n");
 				fwrite(STDOUT, "\n");
+
+				$jsonDownload = array(
+					'arquivo' => $downloading['arquivo'],
+					'speed' => $info_speed,
+					'size' => $info_size,
+					'baixado' => $info_baixado,
+					'porcentagem' => $porcentagem,
+					'porcentagem_resume' => $porcentagem_resume,
+					'porcentagem_real' => $porcentagem_real,
+					'resume' => intval($downloading['resume'])
+				);
+
+				$json['downloads'][] = $jsonDownload;
 			}
 			flush();
+
+			file_put_contents(__DIR__.'/web/data-info.js', "Data=".json_encode($json));
 		}
 
 		// Grava o horario no PID
@@ -410,7 +440,7 @@
 
 	echo "\n";
 
-
+	file_put_contents(__DIR__.'/web/data-info.js', "Data=".json_encode(array()));
 	unlink(PID);
     echo "\n\n";
 	verbose("FIM - " . date("d/m/Y H:i:s"), "echo,log");
