@@ -378,7 +378,7 @@
 			curl_multi_remove_handle($mh, $done['handle']);
 			fclose($baixadoControle['file_handle']);
 			
-			if($info['size_download']==$info['download_content_length']) {
+			if($info['size_download']==$baixadoControle['size']) {
 				// Adiciona +1 no controle de baixados
 				$controle['baixados']++;
 
