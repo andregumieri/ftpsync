@@ -237,7 +237,7 @@
 		if(strpos($file, " -> ") !== false) continue;
 
 		// Verifica se o arquivo já existe e se é do mesmo tamanho do arquivo remoto
-		if(file_exists($base.$file) && filesize($base.$file)==intval($size)) {
+		if(file_exists(DOWNLOAD.'/'.$file) && filesize(DOWNLOAD.'/'.$file)==intval($size)) {
 			verbose("<redbg><black>[Ignorando]</black></redbg> <blue>{$base}</blue><green>{$file}</green>", "echo,log");
 			continue;
 		}
@@ -250,8 +250,8 @@
 
 		// Verifica se é para dar resume no arquivo
 		$resume = 0;
-		if(file_exists($base.$file)) {
-			$resume = filesize($base.$file);
+		if(file_exists(DOWNLOAD.'/'.$file)) {
+			$resume = filesize(DOWNLOAD.'/'.$file);
 		}
 
 
