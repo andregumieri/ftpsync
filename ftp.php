@@ -177,7 +177,7 @@
 		verbose("[{$mensagem} - " . date("H:i:s") . "] {$arquivo['file']}", "echo,log");
 	}
 
-	function moverParaFinalizados($arquivo, $finalizados_array) {
+	function moverParaFinalizados($arquivo, &$finalizados_array) {
 		if(!defined("FINISHED")) return false;
 		global $finalizados_root_niveis;
 
@@ -427,7 +427,7 @@
 				file_put_contents(DOWNLOADED.'/'.$baixadoControle['arquivo'], mktime());
 
 				// Move para finalizados (se a opção estiver setada)
-				moverParaFinalizados($baixadoControle['arquivo'], &$finalizados_array);
+				moverParaFinalizados($baixadoControle['arquivo'], $finalizados_array);
 			} else {
 				$msgDeErro = curl_error($done['handle']);
 				verbose("[Falha - " . date("H:i:s") . "] " . $downloadControle[md5($info['url'])]['arquivo'], "echo,log");
