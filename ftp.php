@@ -94,11 +94,10 @@
 		foreach($entradas as $entrada) {
 			if(empty($entrada)) continue;
 			if(substr($entrada, -1)==":") {
-				if(strpos($entrada, "./")==0) $entrada = substr($entrada,2);
+				if(strpos($entrada, "./")===0) $entrada = substr($entrada,2);
 				$pasta_raiz = $directory.substr($entrada, 0, -1);
 				continue;
 			}
-
 			
 
 			$item = array();
