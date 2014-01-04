@@ -125,7 +125,7 @@
 		curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
 		curl_setopt($curl, CURLOPT_FILE, $localFile); #output
 		curl_setopt($curl, CURLOPT_USERPWD, FTP_USER . ":" . FTP_PASS);	
-		//curl_setopt($curl, CURLOPT_FRESH_CONNECT, true);
+		curl_setopt($curl, CURLOPT_FRESH_CONNECT, true);
 		if($resume>0) {
 			curl_setopt($curl, CURLOPT_RESUME_FROM, $resume);
 		}
@@ -221,6 +221,10 @@
 		$slotFile[$x] = null;
     }
     $conn_id = ftp_connect(FTP_HOST);
+    if(!$conn_id) {
+    	unlink(PID);
+    	die("Não foi possivel fazer a conexão\n");
+    }
     ftp_login($conn_id, FTP_USER, FTP_PASS);
     ftp_set_option($conn_id, FTP_TIMEOUT_SEC, 86400);
 	echo "\n";
