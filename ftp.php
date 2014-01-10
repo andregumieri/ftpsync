@@ -417,7 +417,7 @@
 				$controle['baixados']++;
 
 				// Fecha o arquivo
-				verbose("[Finalizado - " . date("H:i:s") . "] " . $baixadoControle['arquivo'], "echo,log");
+				verbose("\n[Finalizado - " . date("H:i:s") . "] " . $baixadoControle['arquivo'], "echo,log");
 				
 				// Grava o arquivo de cache
 				file_put_contents(DOWNLOADED.'/'.$baixadoControle['arquivo'], mktime());
@@ -426,7 +426,7 @@
 				moverParaFinalizados($baixadoControle['arquivo'], $finalizados_array);
 			} else {
 				$msgDeErro = curl_error($done['handle']);
-				verbose("[Falha - " . date("H:i:s") . "] " . $downloadControle[md5($info['url'])]['arquivo'], "echo,log");
+				verbose("\n[Falha - " . date("H:i:s") . "] " . $downloadControle[md5($info['url'])]['arquivo'], "echo,log");
 				verbose("\t{$msgDeErro}", "echo,log");
 			}
 
