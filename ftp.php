@@ -336,27 +336,28 @@
 	// Executa o download
 	$lastScreen = 0;
 	$running=null;
+	$json = array(
+		"timestamp" => mktime(),
+		"info" => array(),
+		"downloads" => array()
+	);
 	do {
 		if($PRINT_CONSOLE) {
 			$screen_cols = intval(exec('tput cols'));
 			$screen_lines = intval(exec('tput lines'));
 			$now_ms = microtime(true);
-			$json = array(
-				"timestamp" => mktime(),
-				"info" => array(),
-				"downloads" => array()
-			);
 			if(($now_ms-$lastScreen)>0.500) {
 				$lastScreen = microtime(true);
 				// Escreve na tela a cada 1 segundo
-				fwrite(STDOUT, "\033[2J\n");
-				fwrite(STDOUT, "Faltam " . ($controle['totalBaixar']-$controle['baixados']) . " de " . $controle['totalBaixar'] . "\n");
-				fwrite(STDOUT, "\n");
-				fwrite(STDOUT, "\n");
+				// fwrite(STDOUT, "\033[2J\n");
+				// fwrite(STDOUT, "Faltam " . ($controle['totalBaixar']-$controle['baixados']) . " de " . $controle['totalBaixar'] . "\n");
+				// fwrite(STDOUT, "\n");
+				// fwrite(STDOUT, "\n");
 
 				$json['info'] = array(
 					'totalBaixar' => $controle['totalBaixar'],
 					'baixados' => $controle['baixados'],
+					'speed' => 0
 				);
 		
 				foreach($downloadControle as $downloading) {
@@ -369,19 +370,7 @@
 					$porcentagem_resume = round((intval($downloading['resume'])*100)/intval($downloading['size']));
 					$porcentagem_real = $porcentagem-$porcentagem_resume;
 
-					$progresso_espaco = $screen_cols;
-					$progresso_char = round($progresso_espaco*($porcentagem/100));
-					$progresso_blank = $progresso_espaco-$progresso_char;
-
-					//$progresso = "[";
-					$progresso = Color::set("<bluebg>" . str_repeat(" ", $progresso_char) . "</bluebg>");
-					$progresso .= Color::set("<blackbg>" . str_repeat(" ", $progresso_blank) . "</blackbg>");
-					//$progresso .= "]";
-					
-					fwrite(STDOUT, $downloading['arquivo'] . "\n");
-					fwrite(STDOUT, $progresso . "\n");
-					fwrite(STDOUT, "({$info_speed} kbps) - {$porcentagem}% | {$info_baixado} de {$info_size} | RESUME: {$downloading['resume']}\n");
-					fwrite(STDOUT, "\n");
+					$json['info']['speed'] += $info_speed;
 
 					$jsonDownload = array(
 						'arquivo' => $downloading['arquivo'],
@@ -396,11 +385,15 @@
 
 					$json['downloads'][] = $jsonDownload;
 				}
-				flush();
 
 				file_put_contents(__DIR__.'/web/data-info.js', "Data=".json_encode($json));
 			}
 		}
+
+
+		// Escreve Status
+		echo "\r[" . $json['info']['speed'] . 'kbps | finished: ' . ($controle['baixados']) . " | total: " . $controle['totalBaixar'] . "]";
+		flush();
 
 		// Grava o horario no PID
 		file_put_contents(PID, mktime());
