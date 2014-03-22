@@ -392,8 +392,10 @@
 
 
 		// Escreve Status
-		echo "\r[" . $json['info']['speed'] . 'kbps | finished: ' . ($controle['baixados']) . " | total: " . $controle['totalBaixar'] . "]";
-		flush();
+		if($PRINT_CONSOLE) {
+			echo "\r[" . $json['info']['speed'] . 'kbps | finished: ' . ($controle['baixados']) . " | total: " . $controle['totalBaixar'] . "]";
+			flush();
+		}
 
 		// Grava o horario no PID
 		file_put_contents(PID, mktime());
