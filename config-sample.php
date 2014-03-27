@@ -37,4 +37,11 @@
 
 	# Onde escrever o log (opcional)
 	# define("LOG", "/caminho/dos/logs");
+
+	# Velocidade minima em que o script deve operar (em kbps)
+	define("MIN_SPEED", 100);
+
+	# Período máximo antes de matar o script por estar em velocidade minima (em segundos)
+	define("MIN_SPEED_SECONDS", 120);
+
 ?>

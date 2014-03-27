@@ -333,6 +333,10 @@
 	}
 
 
+	// Controle de velocidade
+	$underspeed = null;
+
+
 	// Executa o download
 	$lastScreen = 0;
 	$running=null;
@@ -440,16 +444,41 @@
 				baixarArquivo(array_shift($baixar));
 			}
 		}
+
+
+		// Verifica velocidade
+		if($json['info']['speed']<MIN_SPEED) {
+			if(is_null($underspeed)) {
+				$underspeed = mktime();
+			} else {
+				if(mktime()-$underspeed>=MIN_SPEED_SECONDS) {
+					$running = false;
+					$baixar = array();
+					// unlink(PID);
+					echo "\n\n *** STOP: Velocidade inferior a " . MIN_SPEED . "kbps por mais de " . MIN_SPEED_SECONDS . " segundos ***";
+				}
+			}
+		} else {
+			$underspeed = null;
+		}
 		
 	} while($running || count($baixar));
 
 
-	echo "\n";
+	// Mata qualquer conexão ainda ativa
+	foreach($downloadControle as $d) {
+		curl_close($d['curl']);
+		curl_multi_remove_handle($mh, $d['curl']);
+	}
 
+
+	echo "\n";
 	file_put_contents(__DIR__.'/web/data-info.js', "Data=".json_encode(array()));
 	unlink(PID);
     echo "\n\n";
 	verbose("FIM - " . date("d/m/Y H:i:s"), "echo,log");
 	echo "\n";
-	curl_multi_close($mh);	
+	curl_multi_close($mh);
+
+	if(!is_null($underspeed)) exit(1);
 ?>
