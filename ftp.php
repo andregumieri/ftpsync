@@ -473,6 +473,14 @@
 
 		$json['downloads'][] = $jsonDownload;*/
 
+
+		// Calcula a velocidade total
+		$total_speed = 0;
+		foreach($downloadControle as $downloading) {
+			$total_speed += round(curl_getinfo($downloading['curl'], CURLINFO_SPEED_DOWNLOAD)/1024);
+		}
+
+
 		// Loga a velocidade
 		if(!empty($LOG_SPEED_FILE)) {
 			$seconds = intval(date('s'));
@@ -487,14 +495,18 @@
 				}
 
 
-				$log = date('Y-m-d H:i:s') . ";" . $json['info']['speed'] . ";" . implode(";", $speed_slot) . "\n";
+				$log = date('Y-m-d H:i:s') . ";" . $total_speed . ";" . implode(";", $speed_slot) . "\n";
 				file_put_contents($LOG_SPEED_FILE, $log, FILE_APPEND);	
 			}
 		}
 
 
+
+
+
+
 		// Verifica velocidade
-		if($json['info']['speed']<MIN_SPEED) {
+		if($total_speed<MIN_SPEED) {
 			if(is_null($underspeed)) {
 				$underspeed = mktime();
 			} else {
