@@ -64,8 +64,10 @@
 	 * CRIA ARQUIVO DE LOG
 	 */
 	$LOG_FILE = '';
+	$LOG_SPEED_FILE = '';
 	if(defined("LOG")) {
 		$LOG_FILE = LOG . '/ftpsync_' . date('Y-m-d_H-i-s') . '.txt';
+		$LOG_SPEED_FILE = LOG . '/ftpsync_speed_' . date('Y-m-d_H-i-s') . '.csv';
 		file_put_contents($LOG_FILE, '');
 	}
 
@@ -145,7 +147,7 @@
 		}
 	}
 
-	function baixarArquivo($arquivo) {
+	function baixarArquivo($arquivo, $slot=null) {
 		global $downloadControle, $mh;
 		$url = "ftp://" . FTP_HOST . "/" . $arquivo['file'];
 		$key = md5($url);
@@ -156,6 +158,10 @@
 		// Cria uma conexão curl
 		$c = criaConexao($fo, $url, $arquivo['resume']);
 
+		if(is_null($slot)) {
+			$slot = count($downloadControle);
+		}
+
 		// Adiciona ao controle de download
 		$downloadControle[$key] = array(
 			"ftp_url"=>$url, 
@@ -164,7 +170,8 @@
 			"curl" => $c,
 			"arquivo"=>$arquivo['file'], 
 			"resume"=>$arquivo['resume'],
-			"size"=>$arquivo['size']
+			"size"=>$arquivo['size'],
+			"slot" => $slot
 		);
 
 		// Adiciona ao Multi Handle
@@ -173,7 +180,7 @@
 		// Exibe mensagem no terminal
 		$mensagem = "Iniciando ";
 		if($arquivo['resume']>0) $mensagem = "Continuando ";
-		verbose("[{$mensagem} - " . date("H:i:s") . "] {$arquivo['file']}", "echo,log");
+		verbose("[{$mensagem} #{$slot} - " . date("H:i:s") . "] {$arquivo['file']}", "echo,log");
 	}
 
 	function moverParaFinalizados($arquivo, &$finalizados_array) {
@@ -345,6 +352,7 @@
 		"info" => array(),
 		"downloads" => array()
 	);
+	$lastLogSeconds = -1;
 	do {
 		if($PRINT_CONSOLE) {
 			$screen_cols = intval(exec('tput cols'));
@@ -384,6 +392,7 @@
 						'porcentagem' => $porcentagem,
 						'porcentagem_resume' => $porcentagem_resume,
 						'porcentagem_real' => $porcentagem_real,
+						'slot' => $downloading['slot'],
 						'resume' => intval($downloading['resume'])
 					);
 
@@ -414,6 +423,7 @@
 		while($done=curl_multi_info_read($mh)) {
 			$info = curl_getinfo($done['handle']);
 			$baixadoControle = $downloadControle[md5($info['url'])];
+			$slotAtual = $baixadoControle['slot'];
 			curl_close($done['handle']);
 			curl_multi_remove_handle($mh, $done['handle']);
 			fclose($baixadoControle['file_handle']);
@@ -423,7 +433,7 @@
 				$controle['baixados']++;
 
 				// Fecha o arquivo
-				verbose("\n[Finalizado - " . date("H:i:s") . "] " . $baixadoControle['arquivo'], "echo,log");
+				verbose("\n[Finalizado #{$slotAtual} - " . date("H:i:s") . "] " . $baixadoControle['arquivo'], "echo,log");
 				
 				// Grava o arquivo de cache
 				file_put_contents(DOWNLOADED.'/'.$baixadoControle['arquivo'], mktime());
@@ -432,7 +442,7 @@
 				moverParaFinalizados($baixadoControle['arquivo'], $finalizados_array);
 			} else {
 				$msgDeErro = curl_error($done['handle']);
-				verbose("\n[Falha - " . date("H:i:s") . "] " . $downloadControle[md5($info['url'])]['arquivo'], "echo,log");
+				verbose("\n[Falha #{$slotAtual} - " . date("H:i:s") . "] " . $downloadControle[md5($info['url'])]['arquivo'], "echo,log");
 				verbose("\t{$msgDeErro}", "echo,log");
 			}
 
@@ -441,7 +451,44 @@
 
 			// Coloca outro arquivo para baixar
 			if($baixar) {
-				baixarArquivo(array_shift($baixar));
+				baixarArquivo(array_shift($baixar), $slotAtual);
+			}
+
+			// A cada arquivo que terminar, volta o underspeed para null
+			// pois caso tenha uma sequencia muito grande de arquivos pequenos 
+			// pode ser que o script interprete como velocidade baixa
+			$underspeed = null;
+		}
+
+/*		$jsonDownload = array(
+			'arquivo' => $downloading['arquivo'],
+			'speed' => $info_speed,
+			'size' => $info_size,
+			'baixado' => $info_baixado,
+			'porcentagem' => $porcentagem,
+			'porcentagem_resume' => $porcentagem_resume,
+			'porcentagem_real' => $porcentagem_real,
+			'resume' => intval($downloading['resume'])
+		);
+
+		$json['downloads'][] = $jsonDownload;*/
+
+		// Loga a velocidade
+		if(!empty($LOG_SPEED_FILE)) {
+			$seconds = intval(date('s'));
+			if($seconds!=$lastLogSeconds) {
+				$lastLogSeconds = $seconds;
+				$speed_slot = array();
+
+				for($x=0; $x<SLOTS; $x++) $speed_slot[$x] = -1;
+				foreach($downloadControle as $downloading) {
+					$info_speed = round(curl_getinfo($downloading['curl'], CURLINFO_SPEED_DOWNLOAD)/1024);
+					$speed_slot[$downloading['slot']] = $info_speed;
+				}
+
+
+				$log = date('Y-m-d H:i:s') . ";" . $json['info']['speed'] . ";" . implode(";", $speed_slot) . "\n";
+				file_put_contents($LOG_SPEED_FILE, $log, FILE_APPEND);	
 			}
 		}
 
