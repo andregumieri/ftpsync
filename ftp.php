@@ -1,7 +1,7 @@
 #!/usr/bin/php
 <?php
 	$PRINT_CONSOLE = true;
-	if($argv[1]=="background") $PRINT_CONSOLE = false;
+	if(array_search("background", $argv) !== FALSE) $PRINT_CONSOLE = false;
 
 	error_reporting(E_ERROR | E_PARSE);
 	if(!@include 'config.php') die("Arquivo de configuração config.php não encontrado.\n\n");
@@ -42,11 +42,25 @@
 	define("SLOTS", $FTP_SLOTS); unset($FTP_SLOTS);
 	define("DOWNLOAD", $FTP_DOWNLOAD); unset($FTP_DOWNLOAD);
 	define("DOWNLOADED", $FTP_DOWNLOADED); unset($FTP_DOWNLOADED);
+	define("FAIL", __DIR__.'/.fail');
 	if(isset($FTP_FINISHED)) define("FINISHED", $FTP_FINISHED); unset($FTP_FINISHED);
 
 
+
 	/**
-	 * CRIA AS PASTAS NECESSARIAS
+	 * SE ESTIVER SETADO O ATRIBUTO iffail, VERIFICA SE TEM ARQUIVO DE FAIL
+	 * E ENTAO RODA. SE NAO TIVER, MORRE O SCRIPT
+	 */
+	if(array_search("iffail", $argv) !== FALSE && !file_exists(FAIL)) {
+		unlink(PID);
+		die();
+	} elseif(array_search("iffail", $argv) !== FALSE && file_exists(FAIL)) {
+		echo "-- RODANDO NO MODO IF FAIL --\n";
+	}
+
+
+	/**
+	 * CRIA AS PASTAS NECESSARIAS E DELETA OS ARQUIVOS DESNECESSARIOS
 	 */
 	if(!file_exists(DOWNLOAD)) mkdir(DOWNLOAD, 0755, true);
 	if(!file_exists(DOWNLOAD)) die("Não foi possível criar pasta de download\n");
@@ -58,6 +72,8 @@
 		if(!file_exists(FINISHED)) mkdir(FINISHED, 0755, true);
 		if(!file_exists(FINISHED)) die("Não foi possível criar pasta de finalizados\n");		
 	}
+
+	if(file_exists(FAIL)) unlink(FAIL);
 
 
 	/**
@@ -526,6 +542,7 @@
 				if(mktime()-$underspeed>=MIN_SPEED_SECONDS) {
 					$running = false;
 					$baixar = array();
+					file_put_contents(FAIL, mktime());
 					// unlink(PID);
 					echo "\n\n *** STOP: Velocidade inferior a " . MIN_SPEED . "kbps por mais de " . MIN_SPEED_SECONDS . " segundos ***";
 				}

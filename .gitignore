@@ -2,4 +2,5 @@ download
 .pid
 config.php
 .cache
+.fail
 __*
