@@ -184,6 +184,7 @@
 	}
 
 	function moverParaFinalizados($arquivo, &$finalizados_array) {
+		$movido = false;
 		if(!defined("FINISHED")) return false;
 		global $finalizados_root_niveis;
 
@@ -202,11 +203,15 @@
 			if($finalizados_array[$dir_key]==0) {
 				$comando = "mv '" . DOWNLOAD . "/{$dir_niveis}' '" . FINISHED . "/{$dir_niveis}'\n";
 				exec($comando);
+				$movido = true;
 			}
 		} elseif(count($dir_niveis)==$finalizados_root_niveis) {
 			$comando = "mv '" . DOWNLOAD . "/{$arquivo}' '" . FINISHED . "/{$arquivo}'\n";
 			exec($comando);
+			$movido = true;
 		}
+
+		return $movido;
 	}
 
 
@@ -255,7 +260,14 @@
 
 		// Verifica se o arquivo já existe e se é do mesmo tamanho do arquivo remoto
 		if(file_exists(DOWNLOAD.'/'.$file) && filesize(DOWNLOAD.'/'.$file)==intval($size)) {
-			verbose("<redbg><black>[Ignorando]</black></redbg> <blue>{$base}</blue><green>{$file}</green>", "echo,log");
+			$movido = moverParaFinalizados($base.$file, $finalizados_array);
+			if($movido) {
+				verbose("[Pasta Movida] {$base}{$file}", "echo,log");
+			} else {
+				verbose("[Ignorando] {$base}{$file}", "echo,log");	
+			}
+			
+			
 			continue;
 		}
 
@@ -428,7 +440,7 @@
 			curl_multi_remove_handle($mh, $done['handle']);
 			fclose($baixadoControle['file_handle']);
 			
-			if($info['size_download']==$baixadoControle['size']) {
+			if($info['size_download']+$baixadoControle['resume']==$baixadoControle['size']) {
 				// Adiciona +1 no controle de baixados
 				$controle['baixados']++;
 
@@ -443,7 +455,8 @@
 			} else {
 				$msgDeErro = curl_error($done['handle']);
 				verbose("\n[Falha #{$slotAtual} - " . date("H:i:s") . "] " . $downloadControle[md5($info['url'])]['arquivo'], "echo,log");
-				verbose("\t{$msgDeErro}", "echo,log");
+				verbose("\tSize: " . $info['size_download'] . " | Baixado: " . $baixadoControle['size']);
+				verbose("\tErro: {$msgDeErro}", "echo,log");
 			}
 
 			// Tira o arquivo da array de downloads
