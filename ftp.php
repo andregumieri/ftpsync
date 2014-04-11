@@ -15,7 +15,11 @@
 		$timepid = file_get_contents(PID);
 		$time_diff = mktime()-$timepid;
 
-		if($time_diff<PID_WAIT_TIME) die("Já existe um processo em andamento. Tente novamente em " . (PID_WAIT_TIME-$time_diff) . " segundos.\n");
+		if($time_diff<PID_WAIT_TIME) {
+			if(array_search("iffail", $argv) === FALSE) {
+				die("Já existe um processo em andamento. Tente novamente em " . (PID_WAIT_TIME-$time_diff) . " segundos.\n");
+			}
+		}
 	}
 	file_put_contents(PID, mktime());
 
